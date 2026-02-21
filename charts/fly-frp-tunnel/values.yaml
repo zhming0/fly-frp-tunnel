@@ -1,0 +1,52 @@
+# fly-frp-tunnel operator configuration.
+
+# Fly.io configuration (required).
+flyApiToken: ""
+flyApp: ""
+flyRegion: ""
+
+# Machine size preset for fly.io Machines.
+flyMachineSize: "shared-cpu-1x"
+
+# LoadBalancer class string to watch.
+loadBalancerClass: "fly-frp-tunnel.dev/lb"
+
+# Container images.
+frpsImage: "snowdreamtech/frps:latest"
+frpcImage: "snowdreamtech/frpc:latest"
+
+# Operator image.
+image:
+  repository: ghcr.io/zhiming0/fly-frp-tunnel
+  tag: ""  # Defaults to appVersion.
+  pullPolicy: IfNotPresent
+
+# Operator resource limits.
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+# Number of operator replicas (leader election ensures only one is active).
+replicaCount: 1
+
+# Service account configuration.
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Pod annotations.
+podAnnotations: {}
+
+# Node selector.
+nodeSelector: {}
+
+# Tolerations.
+tolerations: []
+
+# Affinity.
+affinity: {}

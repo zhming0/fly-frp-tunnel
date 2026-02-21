@@ -1,0 +1,16 @@
+apiVersion: v2
+name: fly-frp-tunnel
+description: Kubernetes LoadBalancer operator using Fly.io Machines and frp tunnels
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - loadbalancer
+  - fly.io
+  - frp
+  - tunnel
+  - homelab
+home: https://github.com/zhiming0/fly-frp-tunnel
+sources:
+  - https://github.com/zhiming0/fly-frp-tunnel
