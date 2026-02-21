@@ -86,10 +86,11 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		HealthProbeBindAddress: healthProbeAddr,
-		LeaderElection:         true,
-		LeaderElectionID:       "fly-tunnel-operator",
+		Scheme:                  scheme,
+		HealthProbeBindAddress:  healthProbeAddr,
+		LeaderElection:          true,
+		LeaderElectionID:        "fly-tunnel-operator",
+		LeaderElectionNamespace: operatorNamespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to create manager")

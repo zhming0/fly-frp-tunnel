@@ -330,9 +330,9 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 			Name:      configMapName,
 			Namespace: m.config.OperatorNamespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":       "frpc",
-				"app.kubernetes.io/managed-by": "fly-tunnel-operator",
-				"fly-tunnel-operator.dev/service":   fmt.Sprintf("%s-%s", svc.Namespace, svc.Name),
+				"app.kubernetes.io/name":          "frpc",
+				"app.kubernetes.io/managed-by":    "fly-tunnel-operator",
+				"fly-tunnel-operator.dev/service": fmt.Sprintf("%s-%s", svc.Namespace, svc.Name),
 			},
 		},
 		Data: map[string]string{
@@ -380,9 +380,10 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "frpc",
-							Image: m.config.FrpcImage,
-							Args:  []string{"-c", "/etc/frp/frpc.toml"},
+							Name:    "frpc",
+							Image:   m.config.FrpcImage,
+							Command: []string{"frpc"},
+							Args:    []string{"-c", "/etc/frp/frpc.toml"},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "config",
