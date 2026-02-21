@@ -12,9 +12,9 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/zhiming0/fly-tunnel-operator/internal/fakefly"
-	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
-	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
+	"github.com/zhming0/fly-tunnel-operator/internal/fakefly"
+	"github.com/zhming0/fly-tunnel-operator/internal/flyio"
+	"github.com/zhming0/fly-tunnel-operator/internal/tunnel"
 )
 
 const testNamespace = "fly-tunnel-operator-system"

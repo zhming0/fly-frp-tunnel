@@ -17,7 +17,7 @@ frpcImage: "snowdreamtech/frpc:latest"
 
 # Operator image.
 image:
-  repository: ghcr.io/zhiming0/fly-tunnel-operator
+  repository: ghcr.io/zhming0/fly-tunnel-operator
   tag: ""  # Defaults to appVersion.
   pullPolicy: IfNotPresent
 

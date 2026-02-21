@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/zhiming0/fly-tunnel-operator/internal/controller"
-	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
+	"github.com/zhming0/fly-tunnel-operator/internal/controller"
+	"github.com/zhming0/fly-tunnel-operator/internal/tunnel"
 )
 
 const (

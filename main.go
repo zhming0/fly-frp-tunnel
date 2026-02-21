@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/zhiming0/fly-tunnel-operator/internal/controller"
-	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
-	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
+	"github.com/zhming0/fly-tunnel-operator/internal/controller"
+	"github.com/zhming0/fly-tunnel-operator/internal/flyio"
+	"github.com/zhming0/fly-tunnel-operator/internal/tunnel"
 )
 
 var scheme = runtime.NewScheme()

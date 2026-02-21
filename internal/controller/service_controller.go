@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/zhiming0/fly-tunnel-operator/internal/tunnel"
+	"github.com/zhming0/fly-tunnel-operator/internal/tunnel"
 )
 
 const (

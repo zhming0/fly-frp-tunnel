@@ -68,7 +68,7 @@ helm install fly-tunnel-operator charts/fly-tunnel-operator \
 | `loadBalancerClass` | `fly-tunnel-operator.dev/lb` | LoadBalancer class to watch |
 | `frpsImage` | `snowdreamtech/frps:latest` | Container image for frps |
 | `frpcImage` | `snowdreamtech/frpc:latest` | Container image for frpc |
-| `image.repository` | `ghcr.io/zhiming0/fly-tunnel-operator` | Operator image |
+| `image.repository` | `ghcr.io/zhming0/fly-tunnel-operator` | Operator image |
 | `image.tag` | `appVersion` | Operator image tag |
 | `replicaCount` | `1` | Operator replicas (leader election active) |
 

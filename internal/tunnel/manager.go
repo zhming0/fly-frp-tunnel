@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/zhiming0/fly-tunnel-operator/internal/flyio"
-	"github.com/zhiming0/fly-tunnel-operator/internal/frp"
+	"github.com/zhming0/fly-tunnel-operator/internal/flyio"
+	"github.com/zhming0/fly-tunnel-operator/internal/frp"
 )
 
 const (
