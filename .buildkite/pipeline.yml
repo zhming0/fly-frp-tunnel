@@ -6,7 +6,7 @@ steps:
     command: docker buildx bake dev
 
   - label: ":golang: Test"
-    image: golang:1.25.5-alpine@sha256:26111811bc967321e7b6f852e914d14bede324cd1accb7f81811929a6a57fea9
+    image: golang:1.25.5@sha256:a22b2e6c5e753345b9759fba9e5c1731ebe28af506745e98f406cc85d50c828e
     command: ".buildkite/steps/test"
 
   - label: ":helm: Lint Chart"
