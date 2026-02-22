@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -30,8 +31,9 @@ func findFrpBinary(name string) string {
 	}
 
 	// Check common locations.
+	arch := runtime.GOARCH
 	candidates := []string{
-		filepath.Join("/tmp/frp_0.61.1_linux_amd64", name),
+		filepath.Join(fmt.Sprintf("/tmp/frp_0.61.1_%s_%s", runtime.GOOS, arch), name),
 		filepath.Join("/usr/local/bin", name),
 		filepath.Join("/usr/bin", name),
 	}
