@@ -155,6 +155,20 @@ Each LoadBalancer Service gets its own Fly.io Machine running frps and its own d
 
 The frpc client runs as a Deployment inside the cluster. Its config is mounted from a ConfigMap that the operator regenerates on port changes. The frpc connects outbound to the Fly.io Machine's public IP, so no inbound firewall rules are needed on the cluster.
 
+### Service annotations
+
+All tunnel state is stored directly on the Service as annotations — no external database or CRD state:
+
+| Annotation | Description |
+|---|---|
+| `fly-tunnel-operator.dev/fly-app` | Fly.io App name created for this Service |
+| `fly-tunnel-operator.dev/machine-id` | Fly.io Machine ID |
+| `fly-tunnel-operator.dev/frpc-deployment` | Name of the in-cluster frpc Deployment |
+| `fly-tunnel-operator.dev/ip-id` | Fly.io IP address allocation ID |
+| `fly-tunnel-operator.dev/public-ip` | Allocated public IPv4 address |
+| `fly-tunnel-operator.dev/fly-region` | (user-set) Override Fly.io region |
+| `fly-tunnel-operator.dev/fly-machine-size` | (user-set) Override machine size |
+
 ## Helm chart
 
 The Helm chart is in `charts/fly-tunnel-operator/`. To render templates without installing:
