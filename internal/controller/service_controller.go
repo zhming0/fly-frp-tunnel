@@ -137,16 +137,13 @@ func (r *ServiceReconciler) reconcileCreate(ctx context.Context, svc *corev1.Ser
 		return reconcile.Result{}, fmt.Errorf("updating service annotations: %w", err)
 	}
 
-	// Re-fetch again before status update.
-	if err := r.client.Get(ctx, key, svc); err != nil {
-		return reconcile.Result{}, fmt.Errorf("re-fetching service for status: %w", err)
-	}
-
 	// Patch the Service status with the public IP.
+	// Use MergeFrom patch to avoid conflicts with concurrent reconciliations.
+	statusPatch := client.MergeFrom(svc.DeepCopy())
 	svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
 		{IP: result.PublicIP},
 	}
-	if err := r.client.Status().Update(ctx, svc); err != nil {
+	if err := r.client.Status().Patch(ctx, svc, statusPatch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("updating service status: %w", err)
 	}
 
@@ -164,10 +161,11 @@ func (r *ServiceReconciler) reconcileUpdate(ctx context.Context, svc *corev1.Ser
 		svc.Status.LoadBalancer.Ingress[0].IP != publicIP
 
 	if needsStatusUpdate {
+		statusPatch := client.MergeFrom(svc.DeepCopy())
 		svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
 			{IP: publicIP},
 		}
-		if err := r.client.Status().Update(ctx, svc); err != nil {
+		if err := r.client.Status().Patch(ctx, svc, statusPatch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("updating service status: %w", err)
 		}
 		logger.Info("Updated Service status with public IP", "publicIP", publicIP)
