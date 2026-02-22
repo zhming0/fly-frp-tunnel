@@ -125,40 +125,21 @@ metadata:
 | `performance-1x` | 1 dedicated | 2048 MB |
 | `performance-2x` | 2 dedicated | 4096 MB |
 
-## Architecture
+## High Availability
 
-```
-.
-├── main.go                          # Operator entry point
-├── internal/
-│   ├── controller/
-│   │   └── service_controller.go    # Service reconciler (watch + reconcile loop)
-│   ├── tunnel/
-│   │   └── manager.go               # Tunnel lifecycle (provision / update / teardown)
-│   ├── flyio/
-│   │   └── client.go                # Fly.io Machines REST + GraphQL API client
-│   ├── frp/
-│   │   └── config.go                # frpc/frps TOML config generation
-│   └── fakefly/
-│       └── server.go                # Fake Fly.io API server (testing)
-├── charts/fly-tunnel-operator/           # Helm chart
-├── Dockerfile
-└── Makefile
-```
+The current design provisions a **single Fly.io Machine per Service**. This means the frp tunnel has a single point of failure: if the Machine is unavailable, traffic to that Service is interrupted until Fly restarts it.
 
-### Service annotations
+### Why HA is not currently implemented
 
-The operator tracks tunnel state on the Service via annotations:
+Running multiple frps machines and ensuring frpc maintains a connection to each one is not straightforward with frp's existing client:
 
-| Annotation | Description |
-|---|---|
-| `fly-tunnel-operator.dev/fly-app` | Fly.io App name created for this Service |
-| `fly-tunnel-operator.dev/machine-id` | Fly.io Machine ID |
-| `fly-tunnel-operator.dev/frpc-deployment` | Name of the in-cluster frpc Deployment |
-| `fly-tunnel-operator.dev/ip-id` | Fly.io IP address allocation ID |
-| `fly-tunnel-operator.dev/public-ip` | Allocated public IPv4 address |
-| `fly-tunnel-operator.dev/fly-region` | (user-set) Override Fly.io region |
-| `fly-tunnel-operator.dev/fly-machine-size` | (user-set) Override machine size |
+- **Coupon collector problem**: frpc establishes a connection to a Fly app's anycast IP. With multiple machines behind it, Fly's load balancer picks one at random — there is no guarantee frpc connects to every machine.
+- **East-west traffic**: Without a guaranteed per-machine connection, a machine receiving user traffic would need to proxy the request sideways to whichever machine holds the frpc connection, adding latency and coupling.
+- **Custom client required**: A clean solution — a stateless router layer that accepts tunnel connections with a target-machine hint and resolves it via Fly's internal DNS — requires replacing frpc with a custom tunnel client. The router would be genuinely stateless (no shared registry), and router-to-machine traffic is not east-west. But this is a significant implementation effort.
+
+### Future consideration
+
+HA will be considered when there is sufficient demand. If HA is a requirement for your use case, please open an issue.
 
 ## License
 
