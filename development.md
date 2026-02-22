@@ -28,7 +28,7 @@ export FLY_API_TOKEN=<your-token>
 export FLY_ORG=<your-org-slug>
 export FLY_REGION=ord
 
-go run . --fly-machine-size shared-cpu-1x
+go run . --namespace <target-namespace>
 ```
 
 Or equivalently:
@@ -36,6 +36,20 @@ Or equivalently:
 ```bash
 make run
 ```
+
+### Important: `--namespace` flag
+
+The `--namespace` flag (or `OPERATOR_NAMESPACE` env var) controls where the operator creates frpc Deployments, ConfigMaps, and the leader election Lease. When running locally you should always set this explicitly:
+
+```bash
+# Create the namespace first
+kubectl create namespace my-dev-ns
+
+# Run with an explicit namespace
+go run . --namespace my-dev-ns
+```
+
+If omitted, it defaults to `fly-tunnel-operator-system`. The Helm chart handles this automatically by setting `--namespace={{ .Release.Namespace }}` in the Deployment spec, so the operator always targets the Helm release namespace.
 
 By default the operator watches Services with `loadBalancerClass: fly-tunnel-operator.dev/lb`. Override with `--load-balancer-class`.
 
