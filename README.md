@@ -1,4 +1,4 @@
-# fly-tunnel-operator
+# Fly® Tunnel Operator
 
 A Kubernetes operator that fulfills `Service type: LoadBalancer` requests by provisioning [frp](https://github.com/fatedier/frp) tunnels through [Fly.io](https://fly.io) Machines.
 
