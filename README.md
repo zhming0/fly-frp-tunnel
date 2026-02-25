@@ -67,8 +67,8 @@ helm install fly-tunnel-operator oci://ghcr.io/zhming0/charts/fly-tunnel-operato
 | `existingSecret` | `""` | Name of a pre-existing Secret containing `fly-api-token` |
 | `flyMachineSize` | `shared-cpu-1x` | Machine size preset |
 | `loadBalancerClass` | `fly-tunnel-operator.dev/lb` | LoadBalancer class to watch |
-| `frpsImage` | `snowdreamtech/frps:latest` | Container image for frps |
-| `frpcImage` | `snowdreamtech/frpc:latest` | Container image for frpc |
+| `frpsImage` | `snowdreamtech/frps:0.61.1@sha256:f18a...` | Container image for frps (digest-pinned) |
+| `frpcImage` | `snowdreamtech/frpc:0.61.1@sha256:55de...` | Container image for frpc (digest-pinned) |
 | `image.repository` | `ghcr.io/zhming0/fly-tunnel-operator` | Operator image |
 | `image.tag` | `appVersion` | Operator image tag |
 | `replicaCount` | `1` | Operator replicas (leader election active) |

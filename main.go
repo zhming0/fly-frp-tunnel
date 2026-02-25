@@ -43,8 +43,8 @@ func main() {
 	flag.StringVar(&flyRegion, "fly-region", "", "Fly.io region. Can also be set via FLY_REGION env var.")
 	flag.StringVar(&flyMachineSize, "fly-machine-size", "shared-cpu-1x", "Fly.io Machine size preset.")
 	flag.StringVar(&loadBalancerClass, "load-balancer-class", controller.DefaultLoadBalancerClass, "LoadBalancer class string to watch.")
-	flag.StringVar(&frpsImage, "frps-image", "snowdreamtech/frps:latest", "Container image for frps.")
-	flag.StringVar(&frpcImage, "frpc-image", "snowdreamtech/frpc:latest", "Container image for frpc.")
+	flag.StringVar(&frpsImage, "frps-image", "snowdreamtech/frps:0.61.1@sha256:f18a0fd489b14d1fdfc68069239722f2ce3ab76b644aeb75219bf1df1b4bcea9", "Container image for frps.")
+	flag.StringVar(&frpcImage, "frpc-image", "snowdreamtech/frpc:0.61.1@sha256:55de10291630ca31e98a07120ad73e25977354a2307731cb28b0dc42f6987c59", "Container image for frpc.")
 	flag.StringVar(&operatorNamespace, "namespace", "", "Namespace for frpc deployments. Can also be set via OPERATOR_NAMESPACE env var.")
 
 	opts := zap.Options{Development: true}
