@@ -30,8 +30,8 @@ func newTestConfig() tunnel.Config {
 		FlyOrg:            "personal",
 		FlyRegion:         "syd",
 		FlyMachineSize:    "shared-cpu-1x",
-		FrpsImage:         "snowdreamtech/frps:latest",
-		FrpcImage:         "snowdreamtech/frpc:latest",
+		FrpsImage:         "snowdreamtech/frps:0.61.1@sha256:f18a0fd489b14d1fdfc68069239722f2ce3ab76b644aeb75219bf1df1b4bcea9",
+		FrpcImage:         "snowdreamtech/frpc:0.61.1@sha256:55de10291630ca31e98a07120ad73e25977354a2307731cb28b0dc42f6987c59",
 		OperatorNamespace: testNamespace,
 	}
 }
@@ -145,7 +145,7 @@ func TestProvision(t *testing.T) {
 	}
 
 	container := deploy.Spec.Template.Spec.Containers[0]
-	if container.Image != "snowdreamtech/frpc:latest" {
+	if container.Image != "snowdreamtech/frpc:0.61.1@sha256:55de10291630ca31e98a07120ad73e25977354a2307731cb28b0dc42f6987c59" {
 		t.Errorf("expected frpc image, got %q", container.Image)
 	}
 }

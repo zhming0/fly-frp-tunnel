@@ -24,7 +24,7 @@ func TestCreateMachine(t *testing.T) {
 		Name:   "test-machine",
 		Region: "syd",
 		Config: flyio.MachineConfig{
-			Image: "snowdreamtech/frps:latest",
+			Image: "snowdreamtech/frps:0.61.1@sha256:f18a0fd489b14d1fdfc68069239722f2ce3ab76b644aeb75219bf1df1b4bcea9",
 			Services: []flyio.MachineService{
 				{Protocol: "tcp", InternalPort: 7000, Ports: []flyio.Port{{Port: 7000}}},
 				{Protocol: "tcp", InternalPort: 80, Ports: []flyio.Port{{Port: 80}}},
