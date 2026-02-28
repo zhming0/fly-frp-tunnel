@@ -355,6 +355,63 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
+func TestTeardown_MissingAnnotations(t *testing.T) {
+	server := fakefly.NewServer()
+	defer server.Close()
+
+	scheme := newTestScheme()
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	mgr := tunnel.NewManager(newTestFlyClient(server), kubeClient, newTestConfig())
+
+	svc := testService("envoy-gateway", "envoy-gateway-system",
+		corev1.ServicePort{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP},
+	)
+
+	result, err := mgr.Provision(context.Background(), svc)
+	if err != nil {
+		t.Fatalf("Provision failed: %v", err)
+	}
+
+	// Verify resources exist before teardown.
+	if server.AppCount() != 1 {
+		t.Fatalf("expected 1 app before teardown, got %d", server.AppCount())
+	}
+
+	// Simulate annotations being wiped (e.g., by Helm or kubectl apply).
+	svc.Annotations = make(map[string]string)
+
+	err = mgr.Teardown(context.Background(), svc)
+	if err != nil {
+		t.Fatalf("Teardown failed: %v", err)
+	}
+
+	// Fly App should still be deleted via the deterministic name fallback.
+	if server.AppCount() != 0 {
+		t.Errorf("expected 0 apps after teardown, got %d", server.AppCount())
+	}
+
+	// frpc Deployment should still be deleted via the deterministic name fallback.
+	var deploy appsv1.Deployment
+	err = kubeClient.Get(context.Background(), types.NamespacedName{
+		Name:      result.FrpcDeployment,
+		Namespace: testNamespace,
+	}, &deploy)
+	if err == nil {
+		t.Error("expected frpc Deployment to be deleted")
+	}
+
+	// frpc ConfigMap should still be deleted via the deterministic name fallback.
+	var cm corev1.ConfigMap
+	err = kubeClient.Get(context.Background(), types.NamespacedName{
+		Name:      result.FrpcDeployment + "-config",
+		Namespace: testNamespace,
+	}, &cm)
+	if err == nil {
+		t.Error("expected frpc ConfigMap to be deleted")
+	}
+}
+
 func TestProvision_RegionOverride(t *testing.T) {
 	server := fakefly.NewServer()
 	defer server.Close()

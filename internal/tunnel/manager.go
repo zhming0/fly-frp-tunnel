@@ -128,38 +128,43 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 func (m *Manager) Teardown(ctx context.Context, svc *corev1.Service) error {
 	logger := log.FromContext(ctx)
 
-	flyAppName := svc.Annotations[AnnotationFlyApp]
-
 	// Delete frpc Deployment and ConfigMap.
-	if deployName, ok := svc.Annotations[AnnotationFrpcDeployment]; ok && deployName != "" {
-		logger.Info("Deleting frpc Deployment", "name", deployName)
-		if err := m.deleteFrpcResources(ctx, deployName); err != nil {
-			logger.Error(err, "Failed to delete frpc resources", "name", deployName)
+	// Use the deterministic name as fallback if the annotation was cleared.
+	deployName := svc.Annotations[AnnotationFrpcDeployment]
+	if deployName == "" {
+		deployName = frpcDeploymentNameForService(svc)
+	}
+	logger.Info("Deleting frpc resources", "name", deployName)
+	if err := m.deleteFrpcResources(ctx, deployName); err != nil {
+		logger.Error(err, "Failed to delete frpc resources", "name", deployName)
+	}
+
+	// Use the deterministic app name as fallback if the annotation was cleared.
+	// Deleting the Fly app cascades to its machines and IP allocations, so we
+	// always attempt this even if individual resource annotations are missing.
+	flyAppName := svc.Annotations[AnnotationFlyApp]
+	if flyAppName == "" {
+		flyAppName = flyAppNameForService(svc)
+	}
+
+	// Best-effort cleanup of individual resources before deleting the app.
+	if ipID, ok := svc.Annotations[AnnotationIPID]; ok && ipID != "" {
+		logger.Info("Releasing dedicated IPv4", "id", ipID)
+		if err := m.flyClient.ReleaseIPAddress(ctx, flyAppName, ipID); err != nil {
+			logger.Error(err, "Failed to release IP", "id", ipID)
+		}
+	}
+	if machineID, ok := svc.Annotations[AnnotationMachineID]; ok && machineID != "" {
+		logger.Info("Deleting fly.io Machine", "id", machineID)
+		if err := m.flyClient.DeleteMachine(ctx, flyAppName, machineID); err != nil {
+			logger.Error(err, "Failed to delete machine", "id", machineID)
 		}
 	}
 
-	if flyAppName != "" {
-		// Release the dedicated IPv4.
-		if ipID, ok := svc.Annotations[AnnotationIPID]; ok && ipID != "" {
-			logger.Info("Releasing dedicated IPv4", "id", ipID)
-			if err := m.flyClient.ReleaseIPAddress(ctx, flyAppName, ipID); err != nil {
-				logger.Error(err, "Failed to release IP", "id", ipID)
-			}
-		}
-
-		// Delete the fly.io Machine.
-		if machineID, ok := svc.Annotations[AnnotationMachineID]; ok && machineID != "" {
-			logger.Info("Deleting fly.io Machine", "id", machineID)
-			if err := m.flyClient.DeleteMachine(ctx, flyAppName, machineID); err != nil {
-				logger.Error(err, "Failed to delete machine", "id", machineID)
-			}
-		}
-
-		// Delete the Fly App.
-		logger.Info("Deleting fly.io App", "app", flyAppName)
-		if err := m.flyClient.DeleteApp(ctx, flyAppName); err != nil {
-			logger.Error(err, "Failed to delete fly app", "app", flyAppName)
-		}
+	// Delete the Fly App (cascades to any remaining machines and IPs).
+	logger.Info("Deleting fly.io App", "app", flyAppName)
+	if err := m.flyClient.DeleteApp(ctx, flyAppName); err != nil {
+		logger.Error(err, "Failed to delete fly app", "app", flyAppName)
 	}
 
 	return nil
