@@ -6,27 +6,17 @@ Designed for homelabs and environments without a cloud provider's load balancer 
 
 ## How it works
 
+```mermaid
+flowchart TD
+    Internet -->|dedicated IPv4| FlyMachine["Fly.io Machine (frps)
+    region: ord"]
+    FlyMachine -->|frp tunnel / TCP| frpc["frpc Deployment
+    (ConfigMap-driven)"]
+    frpc -->|ClusterIP DNS| Service["Your Service
+    (e.g. envoy-gateway)"]
 ```
-Internet
-   |
-   v
-┌──────────────────────────┐
-│  Fly.io Machine (frps)   │  <-- dedicated IPv4
-│  region: ord              │
-└──────────┬───────────────┘
-           │ frp tunnel (TCP)
-           v
-┌──────────────────────────┐
-│  frpc Deployment         │  <-- runs in-cluster
-│  (ConfigMap-driven)      │
-└──────────┬───────────────┘
-           │ ClusterIP DNS
-           v
-┌──────────────────────────┐
-│  Your Service            │  <-- type: LoadBalancer
-│  (e.g. envoy-gateway)    │
-└──────────────────────────┘
-```
+
+Traffic from the internet hits the dedicated IPv4 address allocated on Fly.io, which routes to an `frps` (frp server) process running on a Fly Machine. The frp server forwards the TCP stream over an encrypted tunnel to an `frpc` (frp client) Deployment running inside the Kubernetes cluster. The frpc pod then delivers the traffic to the target Service via its ClusterIP, completing the path from the public internet to your in-cluster workload without requiring any inbound firewall rules.
 
 When a `Service` with `type: LoadBalancer` and `spec.loadBalancerClass: fly-tunnel-operator.dev/lb` is created, the operator:
 
