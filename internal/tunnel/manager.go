@@ -70,14 +70,7 @@ type TunnelResult struct {
 // deploys frpc in-cluster, and returns the public IP for the Service.
 func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelResult, error) {
 	logger := log.FromContext(ctx)
-	tunnelName := tunnelNameForService(svc)
 	flyAppName := flyAppNameForService(svc)
-
-	// Determine region (per-service override or default).
-	region := m.config.FlyRegion
-	if r, ok := svc.Annotations[AnnotationFlyRegion]; ok && r != "" {
-		region = r
-	}
 
 	// Create a dedicated Fly App for this tunnel.
 	logger.Info("Creating fly.io App", "app", flyAppName, "org", m.config.FlyOrg)
@@ -85,56 +78,10 @@ func (m *Manager) Provision(ctx context.Context, svc *corev1.Service) (*TunnelRe
 		return nil, fmt.Errorf("creating fly app: %w", err)
 	}
 
-	// Build fly.io Machine services configuration.
-	// Port 7000 for frp control channel + all service ports.
-	machineServices := []flyio.MachineService{
-		{
-			Protocol:     "tcp",
-			InternalPort: frp.DefaultServerPort,
-			Ports: []flyio.Port{
-				{Port: frp.DefaultServerPort},
-			},
-		},
-	}
-	for _, port := range svc.Spec.Ports {
-		machineServices = append(machineServices, flyio.MachineService{
-			Protocol:     "tcp",
-			InternalPort: int(port.Port),
-			Ports: []flyio.Port{
-				{Port: int(port.Port)},
-			},
-		})
-	}
-
-	// Determine guest config based on machine size.
-	guest := guestForSize(m.config.FlyMachineSize)
-	if size, ok := svc.Annotations[AnnotationFlyMachineSize]; ok && size != "" {
-		guest = guestForSize(size)
-	}
-
-	// Generate frps config and inject it via init command.
-	frpsConfig := frp.GenerateServerConfig(frp.DefaultServerPort)
-
 	// Create the fly.io Machine running frps.
-	logger.Info("Creating fly.io Machine", "name", tunnelName, "app", flyAppName, "region", region)
-	machine, err := m.flyClient.CreateMachine(ctx, flyAppName, flyio.CreateMachineInput{
-		Name:   tunnelName,
-		Region: region,
-		Config: flyio.MachineConfig{
-			Image:    m.config.FrpsImage,
-			Guest:    guest,
-			Services: machineServices,
-			Env: map[string]string{
-				"FRP_SERVER_CONFIG": frpsConfig,
-			},
-			Init: &flyio.InitConfig{
-				Entrypoint: []string{"sh"},
-				Cmd: []string{"-c",
-					"mkdir -p /etc/frp && echo \"$FRP_SERVER_CONFIG\" > /etc/frp/frps.toml && exec frps -c /etc/frp/frps.toml",
-				},
-			},
-		},
-	})
+	machineInput := m.buildMachineInput(svc)
+	logger.Info("Creating fly.io Machine", "name", machineInput.Name, "app", flyAppName, "region", machineInput.Region)
+	machine, err := m.flyClient.CreateMachine(ctx, flyAppName, machineInput)
 	if err != nil {
 		_ = m.flyClient.DeleteApp(ctx, flyAppName)
 		return nil, fmt.Errorf("creating fly machine: %w", err)
@@ -236,55 +183,13 @@ func (m *Manager) Update(ctx context.Context, svc *corev1.Service) error {
 	}
 	logger.Info("Reconciled frpc Deployment", "name", deployName)
 
-	// Update fly.io Machine services for new ports.
+	// Update fly.io Machine config (services, region, guest, etc.).
 	if machineID != "" {
-		machineServices := []flyio.MachineService{
-			{
-				Protocol:     "tcp",
-				InternalPort: frp.DefaultServerPort,
-				Ports: []flyio.Port{
-					{Port: frp.DefaultServerPort},
-				},
-			},
-		}
-		for _, port := range svc.Spec.Ports {
-			machineServices = append(machineServices, flyio.MachineService{
-				Protocol:     "tcp",
-				InternalPort: int(port.Port),
-				Ports: []flyio.Port{
-					{Port: int(port.Port)},
-				},
-			})
-		}
-
-		tunnelName := tunnelNameForService(svc)
-		region := m.config.FlyRegion
-		if r, ok := svc.Annotations[AnnotationFlyRegion]; ok && r != "" {
-			region = r
-		}
-
-		frpsConfig := frp.GenerateServerConfig(frp.DefaultServerPort)
-		_, err := m.flyClient.UpdateMachine(ctx, flyAppName, machineID, flyio.CreateMachineInput{
-			Name:   tunnelName,
-			Region: region,
-			Config: flyio.MachineConfig{
-				Image:    m.config.FrpsImage,
-				Services: machineServices,
-				Env: map[string]string{
-					"FRP_SERVER_CONFIG": frpsConfig,
-				},
-				Init: &flyio.InitConfig{
-					Entrypoint: []string{"sh"},
-					Cmd: []string{"-c",
-						"mkdir -p /etc/frp && echo \"$FRP_SERVER_CONFIG\" > /etc/frp/frps.toml && exec frps -c /etc/frp/frps.toml",
-					},
-				},
-			},
-		})
-		if err != nil {
+		machineInput := m.buildMachineInput(svc)
+		if _, err := m.flyClient.UpdateMachine(ctx, flyAppName, machineID, machineInput); err != nil {
 			return fmt.Errorf("updating fly machine: %w", err)
 		}
-		logger.Info("Updated fly.io Machine services", "machineID", machineID)
+		logger.Info("Updated fly.io Machine", "machineID", machineID)
 	}
 
 	return nil
@@ -436,6 +341,58 @@ func (m *Manager) deleteFrpcResources(ctx context.Context, deploymentName string
 	}
 
 	return nil
+}
+
+// buildMachineInput constructs the CreateMachineInput for a fly.io Machine
+// running frps, derived from the Service spec and operator config.
+func (m *Manager) buildMachineInput(svc *corev1.Service) flyio.CreateMachineInput {
+	tunnelName := tunnelNameForService(svc)
+
+	region := m.config.FlyRegion
+	if r, ok := svc.Annotations[AnnotationFlyRegion]; ok && r != "" {
+		region = r
+	}
+
+	guest := guestForSize(m.config.FlyMachineSize)
+	if size, ok := svc.Annotations[AnnotationFlyMachineSize]; ok && size != "" {
+		guest = guestForSize(size)
+	}
+
+	machineServices := []flyio.MachineService{
+		{
+			Protocol:     "tcp",
+			InternalPort: frp.DefaultServerPort,
+			Ports:        []flyio.Port{{Port: frp.DefaultServerPort}},
+		},
+	}
+	for _, port := range svc.Spec.Ports {
+		machineServices = append(machineServices, flyio.MachineService{
+			Protocol:     "tcp",
+			InternalPort: int(port.Port),
+			Ports:        []flyio.Port{{Port: int(port.Port)}},
+		})
+	}
+
+	frpsConfig := frp.GenerateServerConfig(frp.DefaultServerPort)
+
+	return flyio.CreateMachineInput{
+		Name:   tunnelName,
+		Region: region,
+		Config: flyio.MachineConfig{
+			Image:    m.config.FrpsImage,
+			Guest:    guest,
+			Services: machineServices,
+			Env: map[string]string{
+				"FRP_SERVER_CONFIG": frpsConfig,
+			},
+			Init: &flyio.InitConfig{
+				Entrypoint: []string{"sh"},
+				Cmd: []string{"-c",
+					"mkdir -p /etc/frp && echo \"$FRP_SERVER_CONFIG\" > /etc/frp/frps.toml && exec frps -c /etc/frp/frps.toml",
+				},
+			},
+		},
+	}
 }
 
 func guestForSize(size string) *flyio.GuestConfig {
