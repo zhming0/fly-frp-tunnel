@@ -307,10 +307,11 @@ func TestUpdate(t *testing.T) {
 	svc.Annotations[tunnel.AnnotationIPID] = result.IPID
 	svc.Annotations[tunnel.AnnotationPublicIP] = result.PublicIP
 
-	// Add a new port.
+	// Add a new port and a resource annotation override.
 	svc.Spec.Ports = append(svc.Spec.Ports,
 		corev1.ServicePort{Name: "https", Port: 443, Protocol: corev1.ProtocolTCP},
 	)
+	svc.Annotations[tunnel.AnnotationFrpcMemoryLimit] = "256Mi"
 
 	err = mgr.Update(context.Background(), svc)
 	if err != nil {
@@ -332,7 +333,7 @@ func TestUpdate(t *testing.T) {
 		t.Error("expected updated config to contain port 443")
 	}
 
-	// Verify Deployment has restart annotation.
+	// Verify Deployment spec was reconciled.
 	var deploy appsv1.Deployment
 	err = kubeClient.Get(context.Background(), types.NamespacedName{
 		Name:      result.FrpcDeployment,
@@ -342,8 +343,15 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("expected Deployment to exist: %v", err)
 	}
 
-	if _, ok := deploy.Spec.Template.Annotations["fly-tunnel-operator.dev/restart-at"]; !ok {
-		t.Error("expected restart annotation on Deployment pod template")
+	container := deploy.Spec.Template.Spec.Containers[0]
+	if container.Image != "snowdreamtech/frpc:0.61.1@sha256:55de10291630ca31e98a07120ad73e25977354a2307731cb28b0dc42f6987c59" {
+		t.Errorf("expected frpc image, got %q", container.Image)
+	}
+
+	// Verify resource annotation override was applied.
+	wantMemLim := resource.MustParse("256Mi")
+	if !container.Resources.Limits.Memory().Equal(wantMemLim) {
+		t.Errorf("memory limit: want %v, got %v", &wantMemLim, container.Resources.Limits.Memory())
 	}
 }
 

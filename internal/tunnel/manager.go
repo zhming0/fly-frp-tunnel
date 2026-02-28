@@ -217,7 +217,8 @@ func (m *Manager) Teardown(ctx context.Context, svc *corev1.Service) error {
 	return nil
 }
 
-// Update regenerates frpc config and restarts the frpc Deployment when ports change.
+// Update reconciles the full frpc Deployment/ConfigMap and fly.io Machine to
+// match the current Service spec and annotations.
 func (m *Manager) Update(ctx context.Context, svc *corev1.Service) error {
 	logger := log.FromContext(ctx)
 	publicIP := svc.Annotations[AnnotationPublicIP]
@@ -229,41 +230,11 @@ func (m *Manager) Update(ctx context.Context, svc *corev1.Service) error {
 		return fmt.Errorf("service missing tunnel annotations, cannot update")
 	}
 
-	// Regenerate frpc ConfigMap.
-	configMapName := deployName + "-config"
-	configData := frp.GenerateClientConfig(svc, publicIP, frp.DefaultServerPort)
-
-	var existingCM corev1.ConfigMap
-	if err := m.kubeClient.Get(ctx, types.NamespacedName{
-		Name:      configMapName,
-		Namespace: m.config.OperatorNamespace,
-	}, &existingCM); err != nil {
-		return fmt.Errorf("getting frpc configmap: %w", err)
-	}
-
-	existingCM.Data["frpc.toml"] = configData
-	if err := m.kubeClient.Update(ctx, &existingCM); err != nil {
-		return fmt.Errorf("updating frpc configmap: %w", err)
-	}
-	logger.Info("Updated frpc ConfigMap", "name", configMapName)
-
-	// Restart the Deployment by updating an annotation to trigger a rollout.
-	var deploy appsv1.Deployment
-	if err := m.kubeClient.Get(ctx, types.NamespacedName{
-		Name:      deployName,
-		Namespace: m.config.OperatorNamespace,
-	}, &deploy); err != nil {
-		return fmt.Errorf("getting frpc deployment: %w", err)
-	}
-
-	if deploy.Spec.Template.Annotations == nil {
-		deploy.Spec.Template.Annotations = make(map[string]string)
-	}
-	deploy.Spec.Template.Annotations["fly-tunnel-operator.dev/restart-at"] = time.Now().Format(time.RFC3339)
-	if err := m.kubeClient.Update(ctx, &deploy); err != nil {
+	// Reconcile the full frpc ConfigMap and Deployment spec (image, resources, config, etc.).
+	if err := m.deployFrpc(ctx, svc, publicIP, deployName); err != nil {
 		return fmt.Errorf("updating frpc deployment: %w", err)
 	}
-	logger.Info("Restarted frpc Deployment", "name", deployName)
+	logger.Info("Reconciled frpc Deployment", "name", deployName)
 
 	// Update fly.io Machine services for new ports.
 	if machineID != "" {
@@ -381,6 +352,10 @@ func (m *Manager) deployFrpc(ctx context.Context, svc *corev1.Service, serverAdd
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
+					Annotations: map[string]string{
+						// Force a rollout on every update so pods pick up ConfigMap changes.
+						"fly-tunnel-operator.dev/restart-at": time.Now().Format(time.RFC3339),
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
